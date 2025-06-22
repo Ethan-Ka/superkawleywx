@@ -85,7 +85,6 @@ public:
        timelineGroup_ {nullptr},
        level2ProductsWidget_ {nullptr},
        level2SettingsWidget_ {nullptr},
-       level3ProductsWidget_ {nullptr},
        alertManager_ {manager::AlertManager::Instance()},
        placefileManager_ {manager::PlacefileManager::Instance()},
        markerManager_ {manager::MarkerManager::Instance()},
