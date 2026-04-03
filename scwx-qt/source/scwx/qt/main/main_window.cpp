@@ -61,6 +61,8 @@
 #include <QToolButton>
 #include <QWindow>
 
+std::string windowTitle = "SuperKawley Wx ";
+
 namespace scwx::qt::main
 {
 
@@ -1698,7 +1700,7 @@ void MainWindowImpl::UpdateRadarSite()
    if (radarSite != nullptr)
    {
       mainWindow_->setWindowTitle(
-         tr("Supercell Wx - %1").arg(QString::fromStdString(radarSite->id())));
+         tr("%1 - %2").arg(windowTitle).arg(QString::fromStdString(radarSite->id())));
 
       mainWindow_->ui->radarSiteValueLabel->setVisible(true);
       mainWindow_->ui->radarLocationLabel->setVisible(true);

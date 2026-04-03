@@ -25,3 +25,8 @@ tools/lib/user-setup.sh
 
 # CodeQL
 _codeql_detected_source_root
+/6.10.1
+/6.10.1
+/external
+aqtinstall.log
+/.claude
