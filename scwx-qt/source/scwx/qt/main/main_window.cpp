@@ -1,5 +1,7 @@
 #include "main_window.hpp"
 #include "./ui_main_window.h"
+#include "detached_window.hpp"
+#include "mirror_window.hpp"
 
 #include <scwx/qt/gl/gl_context.hpp>
 #include <scwx/qt/main/application.hpp>
@@ -22,6 +24,8 @@
 #include <scwx/qt/settings/ui_settings.hpp>
 #include <scwx/qt/ui/about_dialog.hpp>
 #include <scwx/qt/ui/alert_dock_widget.hpp>
+#include <scwx/qt/ui/color_scale_widget.hpp>
+#include <scwx/qt/ui/help_dock_widget.hpp>
 #include <scwx/qt/ui/animation_dock_widget.hpp>
 #include <scwx/qt/ui/collapsible_group.hpp>
 #include <scwx/qt/ui/export_settings_dialog.hpp>
@@ -51,9 +55,12 @@
 #include <boost/asio/thread_pool.hpp>
 #include <QDesktopServices>
 #include <QGuiApplication>
+#include <QHBoxLayout>
 #include <QKeyEvent>
 #include <QFileDialog>
 #include <QMessageBox>
+#include <QPointer>
+#include <QPushButton>
 #include <QScreen>
 #include <QSignalBlocker>
 #include <QSplitter>
@@ -171,6 +178,9 @@ public:
 
    ui::AlertDockWidget*              alertDockWidget_ {};
    ui::AnimationDockWidget*          animationDockWidget_ {};
+   ui::HelpDockWidget*               helpDockWidget_ {};
+
+   std::vector<ui::ColorScaleWidget*> colorScaleWidgets_ {};
    ui::AboutDialog*                  aboutDialog_ {};
    ui::ExportSettingsDialog*         exportSettingsDialog_ {};
    ui::GpsInfoDialog*                gpsInfoDialog_ {};
@@ -223,6 +233,10 @@ public:
 
    std::chrono::system_clock::time_point selectedTime_ {};
 
+   // Floating detached and mirror windows (non-owning — windows delete
+   // themselves via WA_DeleteOnClose)
+   std::vector<QPointer<QMainWindow>> detachedWindows_ {};
+
 public slots:
    void UpdateMapParameters(double latitude,
                             double longitude,
@@ -272,6 +286,11 @@ MainWindow::MainWindow(QWidget* parent) :
    p->alertDockWidget_ = new ui::AlertDockWidget(this);
    addDockWidget(Qt::BottomDockWidgetArea, p->alertDockWidget_);
 
+   // Help Panel (right sidebar, hidden by default)
+   p->helpDockWidget_ = new ui::HelpDockWidget(this);
+   addDockWidget(Qt::RightDockWidgetArea, p->helpDockWidget_);
+   p->helpDockWidget_->hide();
+
    // GPS Info Dialog
    p->gpsInfoDialog_ = new ui::GpsInfoDialog(this);
 
@@ -285,6 +304,10 @@ MainWindow::MainWindow(QWidget* parent) :
                               p->alertDockWidget_->toggleViewAction());
    p->alertDockWidget_->toggleViewAction()->setText(tr("&Alerts"));
    ui->actionAlerts->setVisible(false);
+
+   ui->menuView->addSeparator();
+   ui->menuView->addAction(p->helpDockWidget_->toggleViewAction());
+   p->helpDockWidget_->toggleViewAction()->setText(tr("&Product Guide"));
 
    ui->menuDebug->menuAction()->setVisible(
       settings::GeneralSettings::Instance().debug_enabled().GetValue());
@@ -838,6 +861,7 @@ void MainWindowImpl::ConfigureMapLayout()
    };
 
    glContext_ = std::make_shared<gl::GlContext>();
+   colorScaleWidgets_.resize(static_cast<std::size_t>(mapCount));
 
    for (int64_t y = 0; y < gridHeight; y++)
    {
@@ -853,7 +877,56 @@ void MainWindowImpl::ConfigureMapLayout()
                new map::MapWidget(mapIndex, settings_, glContext_);
          }
 
-         hs->addWidget(maps_[mapIndex]);
+         // Wrap map + bottom bar in a container so they stay adjacent
+         // without interfering with the splitter layout.
+         // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
+         QWidget* container = new QWidget();
+         // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
+         QVBoxLayout* vl = new QVBoxLayout(container);
+         vl->setContentsMargins(0, 0, 0, 0);
+         vl->setSpacing(0);
+         vl->addWidget(maps_[mapIndex]);
+
+         // Bottom bar: colour scale + "?" help button
+         // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
+         QWidget* bottomBar = new QWidget(container);
+         // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
+         QHBoxLayout* hl = new QHBoxLayout(bottomBar);
+         hl->setContentsMargins(0, 0, 0, 0);
+         hl->setSpacing(0);
+
+         // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
+         auto* scale = new ui::ColorScaleWidget(bottomBar);
+         colorScaleWidgets_[static_cast<std::size_t>(mapIndex)] = scale;
+         hl->addWidget(scale, 1);
+
+         // "?" button — opens Product Guide for the active product
+         // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
+         auto* helpBtn = new QPushButton(QStringLiteral("?"), bottomBar);
+         helpBtn->setFixedSize(18, 18);
+         helpBtn->setFlat(true);
+         helpBtn->setToolTip(tr("What am I looking at?"));
+         helpBtn->setStyleSheet(
+            "QPushButton { color: #aaa; font-weight: bold; border: none; }"
+            "QPushButton:hover { color: #fff; }");
+         hl->addWidget(helpBtn, 0);
+
+         // Connect button → HelpRequested signal on the map widget
+         QPointer<map::MapWidget> mw = maps_[mapIndex];
+         connect(helpBtn, &QPushButton::clicked,
+                 mw, [mw]()
+                 {
+                    if (mw == nullptr)
+                    {
+                       return;
+                    }
+
+                    Q_EMIT mw->HelpRequested(
+                       QString::fromStdString(mw->GetRadarProductName()));
+                 });
+
+         vl->addWidget(bottomBar);
+         hs->addWidget(container);
       }
 
       connect(hs, &QSplitter::splitterMoved, this, MoveSplitter);
@@ -958,6 +1031,119 @@ void MainWindowImpl::ConnectMapSignals()
               &map::MapWidget::AlertSelected,
               alertDockWidget_,
               &ui::AlertDockWidget::SelectAlert);
+
+      // Connect colour scale to radar sweep updates
+      {
+         std::size_t idx = static_cast<std::size_t>(
+            std::distance(maps_.begin(),
+                          std::find(maps_.begin(), maps_.end(), mapWidget)));
+         if (idx < colorScaleWidgets_.size() && colorScaleWidgets_[idx])
+         {
+            auto* scale = colorScaleWidgets_[idx];
+            QPointer<map::MapWidget> sourceMapWidget = mapWidget;
+
+            connect(mapWidget,
+                    &map::MapWidget::RadarSweepUpdated,
+                    scale,
+                    [sourceMapWidget, scale]()
+                    {
+                       if (sourceMapWidget == nullptr)
+                       {
+                          return;
+                       }
+
+                       scale->UpdateProduct(
+                          QString::fromStdString(
+                             sourceMapWidget->GetRadarProductName()));
+                    },
+                    Qt::QueuedConnection);
+         }
+      }
+
+      // "What am I looking at?" → help panel
+      connect(mapWidget,
+              &map::MapWidget::HelpRequested,
+              helpDockWidget_,
+              &ui::HelpDockWidget::ShowProductHelp,
+              Qt::QueuedConnection);
+
+      connect(mapWidget,
+              &map::MapWidget::DuplicateRequested,
+              this,
+              [this, sourceMapWidget]()
+              {
+                 if (sourceMapWidget == nullptr)
+                 {
+                    logger_->warn(
+                       "DuplicateRequested ignored: source map widget no longer exists");
+                    return;
+                 }
+
+                 logger_->info(
+                    "DuplicateRequested received: sourceMapWidget={} parentWindow={}",
+                    static_cast<const void*>(sourceMapWidget.data()),
+                    static_cast<const void*>(mainWindow_));
+
+                 logger_->info("DetachedWindow allocation begin: source={}"
+                               ,
+                               static_cast<const void*>(sourceMapWidget.data()));
+
+                 auto* win = new DetachedWindow(sourceMapWidget.data(),
+                                               settings_,
+                                               glContext_,
+                                               mainWindow_);
+
+                 logger_->info("DetachedWindow constructed: window={} source={}"
+                               ,
+                               static_cast<const void*>(win),
+                               static_cast<const void*>(sourceMapWidget.data()));
+
+                 detachedWindows_.emplace_back(win);
+                 win->show();
+
+                 logger_->info("DetachedWindow shown: window={}",
+                               static_cast<const void*>(win));
+              },
+              Qt::QueuedConnection);
+
+      connect(mapWidget,
+              &map::MapWidget::MirrorRequested,
+              this,
+              [this, sourceMapWidget]()
+              {
+                 if (sourceMapWidget == nullptr)
+                 {
+                    logger_->warn(
+                       "MirrorRequested ignored: source map widget no longer exists");
+                    return;
+                 }
+
+                 logger_->info(
+                    "MirrorRequested received: sourceMapWidget={} parentWindow={}",
+                    static_cast<const void*>(sourceMapWidget.data()),
+                    static_cast<const void*>(mainWindow_));
+
+                 logger_->info("MirrorWindow allocation begin: source={}"
+                               ,
+                               static_cast<const void*>(sourceMapWidget.data()));
+
+                 auto* win = new MirrorWindow(sourceMapWidget.data(),
+                                             settings_,
+                                             glContext_,
+                                             mainWindow_);
+
+                 logger_->info("MirrorWindow constructed: window={} source={}"
+                               ,
+                               static_cast<const void*>(win),
+                               static_cast<const void*>(sourceMapWidget.data()));
+
+                 detachedWindows_.emplace_back(win);
+                 win->show();
+
+                 logger_->info("MirrorWindow shown: window={}",
+                               static_cast<const void*>(win));
+              },
+              Qt::QueuedConnection);
       connect(mapWidget,
               &map::MapWidget::MapParametersChanged,
               this,

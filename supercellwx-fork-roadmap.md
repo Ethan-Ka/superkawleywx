@@ -291,7 +291,7 @@ the label map. Expanded height: compact ~16px, expanded ~52px.
 
 ### Contextual hover tooltips
 
-- Every product button, tilt selector, color scale, alert badge, and toolbar icon has
+- Most necessary(advanced products, names, etc) product button, tilt selector, color scale, alert badge, and toolbar icon has
   a plain-language tooltip
 - Tooltip on product name: full name, units, what to look for, "Learn more" link
 - Text sourced from product label map and user guide content

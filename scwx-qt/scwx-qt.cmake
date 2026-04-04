@@ -57,13 +57,17 @@ set(SRC_EXE_MAIN source/scwx/qt/main/main.cpp)
 set(HDR_MAIN source/scwx/qt/main/application.hpp
              source/scwx/qt/main/application_paths.hpp
              source/scwx/qt/main/check_privilege.hpp
+             source/scwx/qt/main/detached_window.hpp
              source/scwx/qt/main/main_window.hpp
+             source/scwx/qt/main/mirror_window.hpp
              source/scwx/qt/main/process_validation.hpp
              source/scwx/qt/main/program_options.hpp)
 set(SRC_MAIN source/scwx/qt/main/application.cpp
              source/scwx/qt/main/application_paths.cpp
              source/scwx/qt/main/check_privilege.cpp
+             source/scwx/qt/main/detached_window.cpp
              source/scwx/qt/main/main_window.cpp
+             source/scwx/qt/main/mirror_window.cpp
              source/scwx/qt/main/process_validation.cpp
              source/scwx/qt/main/program_options.cpp)
 set(UI_MAIN  source/scwx/qt/main/main_window.ui)
@@ -280,6 +284,8 @@ set(SRC_TYPES source/scwx/qt/types/alert_types.cpp
 set(HDR_UI source/scwx/qt/ui/about_dialog.hpp
            source/scwx/qt/ui/alert_dialog.hpp
            source/scwx/qt/ui/alert_dock_widget.hpp
+           source/scwx/qt/ui/color_scale_widget.hpp
+           source/scwx/qt/ui/help_dock_widget.hpp
            source/scwx/qt/ui/animation_dock_widget.hpp
            source/scwx/qt/ui/api_key_edit_widget.hpp
            source/scwx/qt/ui/collapsible_group.hpp
@@ -315,6 +321,8 @@ set(HDR_UI source/scwx/qt/ui/about_dialog.hpp
 set(SRC_UI source/scwx/qt/ui/about_dialog.cpp
            source/scwx/qt/ui/alert_dialog.cpp
            source/scwx/qt/ui/alert_dock_widget.cpp
+           source/scwx/qt/ui/color_scale_widget.cpp
+           source/scwx/qt/ui/help_dock_widget.cpp
            source/scwx/qt/ui/animation_dock_widget.cpp
            source/scwx/qt/ui/api_key_edit_widget.cpp
            source/scwx/qt/ui/collapsible_group.cpp
@@ -406,6 +414,7 @@ set(HDR_UI_WIDGETS source/scwx/qt/ui/widgets/focused_combo_box.hpp
                    source/scwx/qt/ui/widgets/imgui_button.hpp)
 set(SRC_UI_WIDGETS source/scwx/qt/ui/widgets/imgui_button.cpp)
 set(HDR_UTIL source/scwx/qt/util/color.hpp
+             source/scwx/qt/util/product_labels.hpp
              source/scwx/qt/util/file.hpp
              source/scwx/qt/util/geographic_lib.hpp
              source/scwx/qt/util/imgui.hpp

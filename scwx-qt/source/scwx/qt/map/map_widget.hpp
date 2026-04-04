@@ -154,6 +154,7 @@ private:
    void leaveEvent(QEvent* ev) final;
    void mousePressEvent(QMouseEvent* ev) final;
    void mouseMoveEvent(QMouseEvent* ev) final;
+   void mouseReleaseEvent(QMouseEvent* ev) final;
    void wheelEvent(QWheelEvent* ev) final;
 
    // QOpenGLWidget implementation.
@@ -200,6 +201,22 @@ signals:
 
    void WidgetPainted();
    void IncomingLevel2ElevationChanged(std::optional<float> incomingElevation);
+
+   /**
+    * Emitted when the user right-clicks the pane without dragging (i.e. a
+    * context-menu gesture rather than a map-rotation gesture).
+    * Connect in the parent window to open a "Duplicate in new window" /
+    * "Mirror in new window" context menu.
+    */
+   void DuplicateRequested();
+   void MirrorRequested();
+
+   /**
+    * Emitted when the user selects "What am I looking at?" from the pane
+    * context menu. The payload is the current radar product name string
+    * (e.g. "N0Q"). Connect to HelpDockWidget::ShowProductHelp().
+    */
+   void HelpRequested(QString productCode);
 };
 
 } // namespace scwx::qt::map
