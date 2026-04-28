@@ -55,3 +55,65 @@ Frequently asked questions:
 
 - Q: How can I contribute?
   - A. Head to [Developer Setup](https://supercell-wx.readthedocs.io/en/stable/development/developer-setup.html) and [Contributing](CONTRIBUTING.md) to configure the Supercell Wx development environment for your IDE. Currently Visual Studio and Visual Studio Code are recommended, with other IDEs remaining untested at this time.
+
+---
+
+## Building and Debugging SuperKawleyWx in Visual Studio 2026 (Windows)
+
+These steps assume you have already cloned the repository. Run them once to set up the build environment, then use the "Build & Debug" steps any time you want to run your fork.
+
+### Prerequisites
+
+- **Visual Studio 2026** (Community or higher) with the **Desktop development with C++** workload installed
+- **Python 3.x** (available on PATH)
+- **CMake 3.24+** (included with VS2026, or install separately)
+- **Qt 6.10.1 for MSVC 2022 x64** — install via the Qt Online Installer to `C:\Qt\6.10.1\msvc2022_64`
+  - If Qt is installed elsewhere, update `CMAKE_PREFIX_PATH` in `CMakeUserPresets.json` and the `PATH` in `.vs\launch.vs.json`
+
+### One-time environment setup
+
+Open a **Developer Command Prompt for VS 2026** (Start menu → "Developer Command Prompt"), navigate to the repo root, and run:
+
+```bat
+tools\configure-environment.bat
+```
+
+This installs Python dependencies, sets up Conan package manager profiles (including the Debug variant), and exits. You only need to run this once (or again after deleting `.venv` or `~/.conan2/profiles`).
+
+### First-time CMake configure (also re-run after adding new source files or dependencies)
+
+Still in the Developer Command Prompt, run:
+
+```bat
+tools\setup-windows-vs2026-debug.bat
+```
+
+This installs Conan packages and runs `cmake` to generate the Visual Studio solution at `build-debug-vs2026\`. Wait for it to finish — it downloads and builds several large libraries (AWS SDK, MapLibre) and can take 20–40 minutes the first time.
+
+> **Alternatively, use VS2026's built-in CMake support** (Open Folder, see below) — VS2026 can configure and build without running the bat file, as long as the Conan packages are already installed.
+
+### Build and debug in Visual Studio 2026
+
+1. **Open the project folder**: In VS2026, choose **File → Open → Folder…** and select the repo root (`superkawleywx\`). VS2026 detects `CMakeLists.txt` and loads the CMake workspace automatically.
+
+2. **Select the build configuration**: In the toolbar dropdown (next to the green play button), choose **`Windows VS 2026 x64 Debug`**. If you used the local Qt path variant, choose **`Windows VS 2026 x64 Debug (Local Qt)`** instead.
+
+3. **Build the project**: Press **Ctrl+Shift+B** (or **Build → Build All**). The first build compiles all external libraries and the application — expect 10–30 minutes. Subsequent incremental builds are fast.
+
+4. **Start debugging**: In the toolbar "Select Startup Item" dropdown, choose **`supercell-wx.exe`**, then press **F5**. The application will launch under the VS2026 debugger with full breakpoint and watch support.
+
+   - The `.vs\launch.vs.json` file already adds `C:\Qt\6.10.1\msvc2022_64\bin` to PATH so Qt DLLs are found at runtime.
+
+5. **Output location**: The built executable is at:
+   ```
+   build\windows-vs2026-x64-debug\Debug\bin\supercell-wx.exe
+   ```
+
+### Troubleshooting
+
+| Symptom | Fix |
+|---|---|
+| *"Could not find Qt6Cored.dll"* or similar at launch | Confirm `C:\Qt\6.10.1\msvc2022_64\bin` is the `PATH` entry in `.vs\launch.vs.json`. Update the path if Qt is installed elsewhere. |
+| *"The system cannot find the file specified"* when pressing F5 | The exe hasn't been built yet. Run **Build → Build All** first. |
+| CMake configure fails with conan profile errors | Re-run `tools\configure-environment.bat` to recreate conan profiles. |
+| Map is black on first launch | Enter a MapTiler or Mapbox API key in Settings. See the FAQ above. |

@@ -1032,6 +1032,8 @@ void MainWindowImpl::ConnectMapSignals()
               alertDockWidget_,
               &ui::AlertDockWidget::SelectAlert);
 
+      QPointer<map::MapWidget> sourceMapWidget = mapWidget;
+
       // Connect colour scale to radar sweep updates
       {
          std::size_t idx = static_cast<std::size_t>(
@@ -1040,7 +1042,6 @@ void MainWindowImpl::ConnectMapSignals()
          if (idx < colorScaleWidgets_.size() && colorScaleWidgets_[idx])
          {
             auto* scale = colorScaleWidgets_[idx];
-            QPointer<map::MapWidget> sourceMapWidget = mapWidget;
 
             connect(mapWidget,
                     &map::MapWidget::RadarSweepUpdated,
@@ -1080,11 +1081,11 @@ void MainWindowImpl::ConnectMapSignals()
                  }
 
                  logger_->info(
-                    "DuplicateRequested received: sourceMapWidget={} parentWindow={}",
+                    "DuplicateRequested received: sourceMapWidget={:p} parentWindow={:p}",
                     static_cast<const void*>(sourceMapWidget.data()),
                     static_cast<const void*>(mainWindow_));
 
-                 logger_->info("DetachedWindow allocation begin: source={}"
+                 logger_->info("DetachedWindow allocation begin: source={:p}"
                                ,
                                static_cast<const void*>(sourceMapWidget.data()));
 
@@ -1093,7 +1094,7 @@ void MainWindowImpl::ConnectMapSignals()
                                                glContext_,
                                                mainWindow_);
 
-                 logger_->info("DetachedWindow constructed: window={} source={}"
+                 logger_->info("DetachedWindow constructed: window={:p} source={:p}"
                                ,
                                static_cast<const void*>(win),
                                static_cast<const void*>(sourceMapWidget.data()));
@@ -1101,7 +1102,7 @@ void MainWindowImpl::ConnectMapSignals()
                  detachedWindows_.emplace_back(win);
                  win->show();
 
-                 logger_->info("DetachedWindow shown: window={}",
+                 logger_->info("DetachedWindow shown: window={:p}",
                                static_cast<const void*>(win));
               },
               Qt::QueuedConnection);
@@ -1119,11 +1120,11 @@ void MainWindowImpl::ConnectMapSignals()
                  }
 
                  logger_->info(
-                    "MirrorRequested received: sourceMapWidget={} parentWindow={}",
+                    "MirrorRequested received: sourceMapWidget={:p} parentWindow={:p}",
                     static_cast<const void*>(sourceMapWidget.data()),
                     static_cast<const void*>(mainWindow_));
 
-                 logger_->info("MirrorWindow allocation begin: source={}"
+                 logger_->info("MirrorWindow allocation begin: source={:p}"
                                ,
                                static_cast<const void*>(sourceMapWidget.data()));
 
@@ -1132,7 +1133,7 @@ void MainWindowImpl::ConnectMapSignals()
                                              glContext_,
                                              mainWindow_);
 
-                 logger_->info("MirrorWindow constructed: window={} source={}"
+                 logger_->info("MirrorWindow constructed: window={:p} source={:p}"
                                ,
                                static_cast<const void*>(win),
                                static_cast<const void*>(sourceMapWidget.data()));
@@ -1140,7 +1141,7 @@ void MainWindowImpl::ConnectMapSignals()
                  detachedWindows_.emplace_back(win);
                  win->show();
 
-                 logger_->info("MirrorWindow shown: window={}",
+                 logger_->info("MirrorWindow shown: window={:p}",
                                static_cast<const void*>(win));
               },
               Qt::QueuedConnection);

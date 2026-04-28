@@ -290,8 +290,7 @@ void ColorScaleWidget::paintEvent(QPaintEvent* /*event*/)
    QPainter painter(this);
    painter.setRenderHint(QPainter::Antialiasing, false);
 
-   const QRect  r  = rect();
-   const double w  = r.width();
+   const QRect r = rect();
 
    // ── Background ──────────────────────────────────────────────────────────
    painter.fillRect(r, QColor(0x18, 0x18, 0x18));

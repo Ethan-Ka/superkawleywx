@@ -66,6 +66,8 @@ namespace scwx::qt::map
 static const std::string logPrefix_ = "scwx::qt::map::map_widget";
 static const auto        logger_    = scwx::util::Logger::Create(logPrefix_);
 
+static constexpr double kDefaultLatitude_ {38.0};
+static constexpr double kDefaultLongitude_ {-98.0};
 static constexpr double kDefaultZoom_ {7.0};
 
 class MapWidgetImpl : public QObject
